@@ -15,4 +15,6 @@ coverage/
 prisma/migrations/dev.db*
 client/dist/
 server/dist/
+server/dist-test/
 shared/dist/
+shared/dist-test/
