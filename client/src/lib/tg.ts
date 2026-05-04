@@ -20,6 +20,7 @@ interface TelegramWebApp {
     notificationOccurred: (type: 'success' | 'warning' | 'error') => void;
   };
   openInvoice?: (url: string, callback?: (status: 'paid' | 'cancelled' | 'failed' | 'pending') => void) => void;
+  openTelegramLink?: (url: string) => void;
   openLink?: (url: string) => void;
   showAlert?: (msg: string) => void;
   showPopup?: (params: { title?: string; message: string; buttons: Array<{ id?: string; type?: string; text: string }> }) => void;
@@ -56,16 +57,33 @@ export function notify(type: 'success' | 'warning' | 'error'): void {
   getTg()?.HapticFeedback?.notificationOccurred(type);
 }
 
+/**
+ * Open a payment URL through the Telegram WebApp SDK with the right method:
+ *
+ * - `t.me/$<slug>` (Stars XTR invoices) → `WebApp.openInvoice` (in-app payment sheet)
+ * - any other `t.me/...` link (e.g. CryptoBot deep link) → `WebApp.openTelegramLink`
+ * - everything else → external browser
+ */
 export function openInvoice(
   url: string,
   cb?: (status: 'paid' | 'cancelled' | 'failed' | 'pending') => void,
 ): void {
   const tg = getTg();
-  if (tg?.openInvoice) {
+  const isStarsInvoice = /^https:\/\/t\.me\/\$/.test(url);
+  const isTgLink = /^https:\/\/t\.me\//.test(url);
+  if (isStarsInvoice && tg?.openInvoice) {
     tg.openInvoice(url, cb);
-  } else {
-    window.open(url, '_blank');
+    return;
   }
+  if (isTgLink && tg?.openTelegramLink) {
+    tg.openTelegramLink(url);
+    return;
+  }
+  if (tg?.openLink) {
+    tg.openLink(url);
+    return;
+  }
+  window.open(url, '_blank');
 }
 
 export function showAlert(msg: string): void {

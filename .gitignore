@@ -18,3 +18,4 @@ server/dist/
 server/dist-test/
 shared/dist/
 shared/dist-test/
+cloudflared-linux-amd64

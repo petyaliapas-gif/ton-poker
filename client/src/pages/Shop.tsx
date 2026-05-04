@@ -1,7 +1,17 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import BalanceBar from '../components/BalanceBar';
+import { api } from '../lib/api';
+import { openInvoice, showAlert, notify } from '../lib/tg';
 
-const PLACEHOLDERS = [
+interface CosmeticDef {
+  id: string;
+  name: string;
+  price: number;
+  emoji: string;
+}
+
+const PLACEHOLDERS: CosmeticDef[] = [
   { id: 'avatar-shark', name: 'Аватар: Акула', price: 250, emoji: '🦈' },
   { id: 'card-back-neon', name: 'Рубашка: Neon', price: 350, emoji: '🃏' },
   { id: 'felt-emerald', name: 'Стол: Изумруд', price: 500, emoji: '🟢' },
@@ -11,6 +21,33 @@ const PLACEHOLDERS = [
 ];
 
 export default function Shop() {
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const buy = async (item: CosmeticDef) => {
+    setBusy(item.id);
+    try {
+      const { link } = await api.createStarsInvoice({
+        itemKind: 'cosmetic',
+        itemId: item.id,
+        stars: item.price,
+      });
+      openInvoice(link, (status) => {
+        if (status === 'paid') {
+          notify('success');
+          showAlert(`Покупка «${item.name}» оформлена!`);
+        } else if (status === 'failed') {
+          notify('error');
+          showAlert(`Платёж не прошёл.`);
+        }
+      });
+    } catch (err) {
+      notify('error');
+      showAlert(`Не удалось создать счёт: ${String(err)}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <div className="min-h-full pb-24">
       <BalanceBar />
@@ -31,12 +68,18 @@ export default function Shop() {
             >
               <div className="text-3xl">{p.emoji}</div>
               <div className="text-xs font-bold">{p.name}</div>
-              <button className="btn-gold w-full text-[11px] py-1.5">⭐ {p.price}</button>
+              <button
+                disabled={busy === p.id}
+                onClick={() => buy(p)}
+                className="btn-gold w-full text-[11px] py-1.5"
+              >
+                {busy === p.id ? '…' : `⭐ ${p.price}`}
+              </button>
             </motion.li>
           ))}
         </ul>
         <div className="text-[11px] text-muted mt-3 text-center">
-          Каталог временный. После релиза подтянется из БД.
+          Платежи проводятся через Telegram Stars.
         </div>
       </div>
     </div>
