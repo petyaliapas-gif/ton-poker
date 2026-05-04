@@ -1,0 +1,193 @@
+// Prisma schema for TON Poker.
+// Money is stored as BigInt in nanoTON (1 TON = 1e9 nanoTON).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(uuid())
+  telegramId      BigInt   @unique
+  username        String?
+  firstName       String
+  lastName        String?
+  languageCode    String?
+  isBot           Boolean  @default(false)
+  isPremium       Boolean  @default(false)
+  avatarUrl       String?
+  countryCode     String?
+  vipUntil        DateTime?
+  referredById    String?
+  referredBy      User?    @relation("Referrals", fields: [referredById], references: [id])
+  referrals       User[]   @relation("Referrals")
+  /// Available balance in nanoTON
+  balanceTon      BigInt   @default(0)
+  /// Locked at tables / in tournaments
+  lockedTon       BigInt   @default(0)
+  /// Lifetime monthly deposit total (nanoTON), used for KYC threshold
+  monthlyDepositTon BigInt @default(0)
+  monthlyResetAt  DateTime @default(now())
+  selfExcludedUntil DateTime?
+  cosmetics       Cosmetic[]
+  transactions    Transaction[]
+  hands           HandSeat[]
+  tournamentEntries TournamentEntry[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  kind        TxnKind
+  /// Always in nanoTON. Positive = credit user, negative = debit.
+  amountTon   BigInt
+  /// Stars amount if applicable (Stars payments).
+  amountStars BigInt?
+  /// External provider reference (CryptoPay invoice ID, Telegram payment_charge_id, etc.)
+  externalId  String?
+  status      TxnStatus @default(PENDING)
+  meta        Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([externalId])
+}
+
+enum TxnKind {
+  DEPOSIT_TON_CRYPTOBOT
+  WITHDRAW_TON_CRYPTOBOT
+  STARS_PURCHASE_TON
+  STARS_PURCHASE_COSMETIC
+  STARS_PURCHASE_TICKET
+  TABLE_BUY_IN
+  TABLE_CASH_OUT
+  RAKE
+  TOURNAMENT_BUY_IN
+  TOURNAMENT_PAYOUT
+  REFERRAL_PAYOUT
+  VIP_RAKEBACK
+  ADJUSTMENT
+}
+
+enum TxnStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REFUNDED
+}
+
+model Hand {
+  id            String   @id @default(uuid())
+  tableId       String
+  startedAt     DateTime @default(now())
+  endedAt       DateTime?
+  /// JSON array of community card codes ("Ah","Td"...)
+  community     Json
+  potTon        BigInt   @default(0)
+  rakeTon       BigInt   @default(0)
+  /// SHA-256 commitment of shuffle seed, published before deal
+  seedCommitment String
+  /// Seed revealed after hand (for provable fairness)
+  seedRevealed  String?
+  seats         HandSeat[]
+}
+
+model HandSeat {
+  id        String   @id @default(uuid())
+  handId    String
+  hand      Hand     @relation(fields: [handId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  seatIndex Int
+  /// Hole card codes (private; only stored for replay/integrity)
+  holeCards Json
+  /// JSON array of actions taken in order
+  actions   Json
+  /// Net win/loss for this hand in nanoTON (positive = won)
+  netTon    BigInt   @default(0)
+
+  @@unique([handId, seatIndex])
+  @@index([userId, handId])
+}
+
+model Tournament {
+  id            String   @id @default(uuid())
+  name          String
+  buyInTon      BigInt
+  feeTon        BigInt
+  /// Payable in Stars (ticket cost)
+  buyInStars    BigInt?
+  startsAt      DateTime
+  registeredAt  DateTime?
+  startedAt     DateTime?
+  endedAt       DateTime?
+  status        TournamentStatus @default(SCHEDULED)
+  maxPlayers    Int
+  payoutStructure Json
+  entries       TournamentEntry[]
+  createdAt     DateTime @default(now())
+}
+
+enum TournamentStatus {
+  SCHEDULED
+  REGISTERING
+  RUNNING
+  COMPLETED
+  CANCELLED
+}
+
+model TournamentEntry {
+  id           String   @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  registeredAt DateTime   @default(now())
+  finishPlace  Int?
+  payoutTon    BigInt     @default(0)
+
+  @@unique([tournamentId, userId])
+}
+
+model CosmeticItem {
+  id          String   @id
+  name        String
+  description String
+  category    CosmeticCategory
+  priceStars  BigInt
+  imageUrl    String
+  createdAt   DateTime @default(now())
+}
+
+enum CosmeticCategory {
+  AVATAR
+  CARD_BACK
+  TABLE_FELT
+  CHIP_SET
+  EMOJI
+}
+
+model Cosmetic {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  itemId    String
+  acquiredAt DateTime @default(now())
+  equipped  Boolean  @default(false)
+
+  @@unique([userId, itemId])
+}
+
+model Setting {
+  key       String   @id
+  valueJson Json
+  updatedAt DateTime @updatedAt
+}

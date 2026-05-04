@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+  }
+  body {
+    background:
+      radial-gradient(ellipse at top, rgba(58, 160, 255, 0.10), transparent 60%),
+      radial-gradient(ellipse at bottom right, rgba(243, 199, 95, 0.06), transparent 60%),
+      #0a0c11;
+    color: theme('colors.fg');
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-95;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-white shadow-glow-accent hover:bg-accent-dark;
+  }
+  .btn-gold {
+    @apply btn bg-gold text-black hover:bg-gold-dark shadow-glow-gold;
+  }
+  .btn-ghost {
+    @apply btn bg-elevated text-fg hover:bg-line;
+  }
+  .btn-danger {
+    @apply btn bg-red-500/90 text-white hover:bg-red-500;
+  }
+  .card-surface {
+    @apply rounded-2xl bg-surface border border-line shadow-card;
+  }
+  .stat-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-elevated/80 px-2.5 py-1 text-xs font-medium text-muted;
+  }
+  .nav-tab {
+    @apply flex flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium text-muted transition;
+  }
+  .nav-tab.active {
+    @apply text-accent;
+  }
+}
+
+/* iOS safe area helpers */
+.safe-top { padding-top: max(env(safe-area-inset-top), 0.5rem); }
+.safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
