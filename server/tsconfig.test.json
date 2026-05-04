@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist-test",
+    "rootDir": "./src",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "declaration": false,
+    "sourceMap": true,
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "paths": {
+      "@ton-poker/shared": ["../shared/dist/index.d.ts"],
+      "@ton-poker/shared/*": ["../shared/dist/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}
